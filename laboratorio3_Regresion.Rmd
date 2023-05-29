@@ -1,0 +1,404 @@
+---
+title: 'Laboratorio # 3, Modelos de regresión lineal'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+
+# Definir el directorio
+```{r}
+dir <- "C:/Users/Oscar/Desktop/Galileo/Trimestre2/Econometria en R/Tareas/laboratorio3"
+setwd(dir)
+getwd()
+library(ggplot2)
+library(dplyr)
+library(caret)
+
+
+
+```
+# Lectura de archivo
+
+```{r}
+df <- read.csv("Admisions.csv")
+```
+
+Ejercicio #1: utilizando R realice una función que dado un dataframe
+cualquiera de dos columnas, donde la primera (índice 1) sea el valor de
+la variable independiente (X) y la segunda sea el valor de una variable
+dependiente (Y), devuelva una lista con los siguientes elementos:
+1) Un arreglo con los valores de los estimadores para 𝛽! y 𝛽".
+2) El valor del coeficiente de determinación 𝑟# del modelo.
+3) El coeficiente de correlación 𝑟 (raíz cuadrada de 𝑟#).
+4) Un arreglo con los valores de los residuos.
+5) Una gráfica con la nube de puntos y la recta de regresión del
+modelo.
+```{r}
+
+regresion_lineal <- function(x,y) {
+  n <- length(x)  # Número de observaciones
+  x_mean <- mean(x)  # Media de x
+  y_mean <- mean(y)  # Media de y
+  xy_mean <- mean(x * y)  # Media de x*y
+  x_squared_mean <- mean(x^2)  # Media de x^2
+  
+  # Coeficientes de la regresión lineal
+  beta_1 <- (xy_mean - x_mean * y_mean) / (x_squared_mean - x_mean^2)
+  beta_0 <- y_mean - beta_1 * x_mean
+  
+  # valores ajustados y los residuos
+  y_pred <- beta_0 + beta_1 * x
+  residual <- y - y_pred
+  
+  # Coeficiente de correlación (R-cuadrado)
+  SS_total <- sum((y - y_mean)^2)
+  SS_residual <- sum(residual^2)
+  R_squared <- ( 1 - SS_residual / SS_total) 
+  R_squared_ <- ( 1 - SS_residual / SS_total)^(1/2) 
+  
+  # Dataframe para el diagrama de dispersión
+  data <- data.frame(x = x, y = y, y_pred = y_pred)
+  
+  # Creación del gráfico de dispersión con la línea de la recta
+  plot <- ggplot(data, aes(x, y)) +
+    geom_point(color = "blue") +
+    geom_line(aes(x, y_pred), color = "red") +
+    geom_text(x = max(x), y = max(y), label = paste("Beta_0: ", round(beta_0, 4)), hjust = 2, vjust = 1) +
+    geom_text(x = max(x), y = max(y), label = paste("Beta_1: ", round(beta_1, 4)), hjust = 3.5, vjust = 2.5) +
+    geom_text(x = max(x), y = max(y), label = paste("corr: ", round(R_squared_,4)), hjust = 4.4, vjust = 4 ) +
+    labs(x = "Variable X", y = "Variable Y", title = "Regresión Lineal") +
+    theme_minimal()
+  
+  
+  # Resultados
+  resultados <- list(fitted_values = y_pred,
+                     residual = residual,
+                     coefficients = c(beta_0, beta_1),
+                     r_squared = R_squared,
+                     correlation = R_squared_,
+                     plot = plot)
+  return(resultados)
+}
+
+reg_lin <-  regresion_lineal( df$TOEFL.Score, df$Chance.of.Admit)
+
+```
+
+### fitted values
+```{r}
+head(reg_lin$fitted_values,25)
+
+```
+
+### Residuals
+```{r}
+head(reg_lin$residual,25)
+
+```
+### Coeficientes de la regresión Beta_0 y Beta_1
+
+```{r}
+print(reg_lin$coefficients)
+
+```
+
+```{r}
+print(paste("Coeficiente de determinación", round (reg_lin$r_squared,4)) )
+print("-------------------------------------------------------------")
+print(paste("Coeficiente de correlación: ", round(reg_lin$correlation,4)))
+```
+
+
+```{r}
+print(reg_lin$plot)
+
+```
+
+Ejercicio #2: Para este ejercicio se le solicita que desarrolle las
+siguientes actividades utilizando RStudio Con el dataset Admissions adjunto
+a este laboratorio realice lo siguiente:
+
+#### 1. Realice un análisis estadístico sobre todas las variables del dataset, recuerde que pude usar la función summary().
+
+```{r}
+summary(df)
+
+```
+#### 2. Realice una gráfica de densidad para cada una de las variables numéricas en el dataset: GRE.Score, TOEFEL.Score, CGPA y Chance of Admit.
+
+```{r}
+df %>%
+    ggplot(aes(x=GRE.Score, y=after_stat(density)))+
+    geom_density(col = "blue", lwd=1, fill = "steel blue")+
+    theme_minimal()+
+    labs(x= "GRE.Score", y = "Density", title = "GRE.Score", subtitle ="chart density")+
+    theme(axis.text = element_text(angle = 90, hjust = 1),
+          plot.title = element_text(hjust = 0.5, size= 14),
+          plot.subtitle = element_text(hjust = 0.5, size=12))
+
+```
+
+
+```{r}
+df %>%
+    ggplot(aes(x=TOEFL.Score, y=after_stat(density)))+
+    geom_density(col = "blue", lwd=1, fill = "steel blue")+
+    theme_minimal()+
+    labs(x= "TOEFL.Score", y = "Density", title = "TOEFL.Score", subtitle ="chart density")+
+    theme(axis.text = element_text(angle = 90, hjust = 1),
+          plot.title = element_text(hjust = 0.5, size= 14),
+          plot.subtitle = element_text(hjust = 0.5, size=12))
+
+```
+
+```{r}
+df %>%
+    ggplot(aes(x=CGPA, y=after_stat(density)))+
+    geom_density(col = "blue", lwd=1, fill = "steel blue")+
+    theme_minimal()+
+    labs(x= "CGPA", y = "Density", title = "CGPA", subtitle ="chart density")+
+    theme(axis.text = element_text(angle = 90, hjust = 1),
+          plot.title = element_text(hjust = 0.5, size= 14),
+          plot.subtitle = element_text(hjust = 0.5, size=12))
+
+```
+
+
+```{r}
+df %>%
+    ggplot(aes(x=Chance.of.Admit, y=after_stat(density)))+
+    geom_density(col = "blue", lwd=1, fill = "steel blue")+
+    theme_minimal()+
+    labs(x= "Chance.of.Admit", y = "Density", title = "Chance.of.Admit", subtitle ="chart density")+
+    theme(axis.text = element_text(angle = 90, hjust = 1),
+          plot.title = element_text(hjust = 0.5, size= 14),
+          plot.subtitle = element_text(hjust = 0.5, size=12))
+
+```
+
+#### 3. Realice una gráfica de correlación entre las variables del inciso anterior.
+```{r}
+correlation_plot <- function(df) {
+  correlation_matrix <- cor(df)
+  
+  # Convertir la matriz de correlación en un dataframe
+  correlation_df <- reshape2::melt(correlation_matrix)
+  correlation_df$correlation <- round(correlation_df$value, 3) 
+  ggplot(data = correlation_df, aes(x = Var1, y = Var2, fill = value)) +
+    geom_tile() +
+    scale_fill_gradient(low = "blue", high = "red") +
+    geom_text(aes(label = correlation), color = "white") + 
+    labs(title = "Diagrama de Correlación", x = "Variables", y = "Variables") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+correlacion <- df %>% select(GRE.Score,TOEFL.Score, CGPA, Chance.of.Admit)
+
+
+
+# Generar el diagrama de correlación
+correlation_plot(correlacion)
+```
+
+#### 4. Realice comentarios sobre el análisis estadístico de las variables numéricas y la gráfica de correlación.
+
+De acuerdo con la matriz de correlación se puede verificar que la variable dependiente y = chance of Admit tiene correlación positiva con las variables independientes, la correlación esta por arriba de 0.78, esto quiere decir que las variables tienen una correlación fuerte.
+
+#### 5. Realice un scatter plot (nube de puntos) de todas las variables numéricas contra la variable Chance of Admit.
+
+```{r}
+df_2 <- df %>% select(GRE.Score,TOEFL.Score, CGPA, Chance.of.Admit)
+
+ggplot(df_2)+
+  geom_point( aes(x= GRE.Score, y = Chance.of.Admit), color = "blue", alpha = 0.8)+
+  labs(x= "GRE.Score", y = "Chance.of.Admit", title = "Diagrama de dispersión  (GRE.Score)" )+
+  theme(plot.title = element_text(hjust = 0.5, size= 14))+
+  theme_minimal()
+
+```
+
+
+
+
+```{r}
+ggplot(df_2)+
+  geom_point( aes(x= CGPA, y = Chance.of.Admit), color = "blue", alpha = 0.8)+
+  labs(x= "CGPA", y = "Chance.of.Admit", title = "Diagrama de dispersión (CGPA)" )+
+  theme(plot.title = element_text(hjust = 0.5, size= 14))+
+  theme_minimal()
+
+```
+
+
+
+
+```{r}
+ggplot(df_2)+
+  geom_point( aes(x= TOEFL.Score, y = Chance.of.Admit), color = "blue", alpha = 0.8)+
+  labs(x= "CGPA", y = "Chance.of.Admit", title = "Diagrama de dispersión (CGPA)" )+
+  theme(plot.title = element_text(hjust = 0.5, size= 14))+
+  theme_minimal()
+
+
+```
+
+
+6. Utilizando la función train y trainControl para crear un crossvalidation
+y le permita evaluar los siguientes modelos:
+
+• Chance of Admit ~ TOEFL.Score.
+• Chance of Admit ~ CGPA
+• Chance of Admit ~ GRE.Score.
+• Chance of Admit ~ TOEFL.Score + CGPA
+• Chance of Admit ~ TOEFL.Score + GRE.Score.
+• Chance of Admit ~ TOEFL.Score + CGPA
+• Chance of Admit ~ TOEFL.Score + CGPA + GRE.Score.
+
+Posteriormente cree una lista ordenando de mejor a peor cual es el
+mejor modelo en predicción, recuerde que es necesario caclular el
+RMSE para poder armar correctamente la lista.
+
+
+
+
+```{r}
+formulas <- list(
+  formula1 = as.formula("Chance.of.Admit ~ TOEFL.Score"),
+  formula2 = as.formula("Chance.of.Admit ~ CGPA"),
+  formula3 = as.formula("Chance.of.Admit ~ GRE.Score"),
+  formula4 = as.formula("Chance.of.Admit ~ TOEFL.Score + CGPA"),
+  formula5 = as.formula("Chance.of.Admit ~ TOEFL.Score + GRE.Score"),
+  formula6 = as.formula("Chance.of.Admit ~ GRE.Score + CGPA"),
+  formula7 = as.formula("Chance.of.Admit ~ TOEFL.Score + CGPA + GRE.Score")
+)
+
+rmse <- function(actual, predicted) {
+  sqrt(mean((actual - predicted) ^ 2))
+}
+
+results <- list()
+
+# Configurar el control de entrenamiento del crosvalidation
+ctrl <- trainControl(method = "cv", number = 10)
+
+# Iterar sobre las fórmulas y entrenar los modelos
+for (i in seq_along(formulas)) {
+  model <- train(
+    formulas[[i]],
+    data = df_2,
+    method = "lm",
+    trControl = ctrl,
+    metric = "RMSE"
+  )
+  results[[i]] <- model
+}
+
+# Crear un vector de RMSE y nombres de modelos
+rmse_values <- sapply(results, function(x) x$results$RMSE[1])
+model_names <- names(results)
+
+# Ordenar los modelos en función del menor RMSE
+sorted_indices <- order(rmse_values)
+sorted_results <- results[sorted_indices]
+sorted_names <- model_names[sorted_indices]
+
+rmse_ <- list()
+
+# Imprimir la lista ordenada con el modelo y su respectivo RMSE
+for (i in seq_along(sorted_results)) {
+  model_name <- sorted_names[i]
+  model_rmse <- rmse_values[sorted_indices[i]]
+  print(cat("Model: ", i, model_name, "tRMSE:", model_rmse, "/n"))
+
+}
+
+
+```
+De acuerdo a los resultados proporcionados, el modelo con el menor error RMSE es el Modelo 1, con un valor de 0.0621829. Los modelos se ordenan de mejor a peor rendimiento en función del valor del RMSE, por lo que el Modelo 1 es el que presenta la mejor capacidad predictiva en comparación con los demás modelos evaluados.
+
+*Chance.of.Admit ~ TOEFL.Score + CGPA + GRE.Score
+
+
+
+Ejercicio #3: A continuación se le muestran tres imágenes que muestran los
+resultados obtenidos de correr la función summary() a dos modelos de
+regresión lineal, para este ejercicio se le solicita que realice la
+interpretación de las tablas resultantes. Recuerde tomar en cuenta la
+signficancia de los parámetros (signfícancia local), la signficancia del
+modelo (signficancia global), el valor del $r^2$: y cualquier observación que
+considere relevante para determinar si el modelo estructuralmente es
+adecuado o no.
+
+
+
+```{r, include = TRUE}
+
+knitr::include_graphics("C:/Users/Oscar/Desktop/Galileo/Trimestre2/Econometria en R/Tareas/laboratorio3/model1.png")
+
+```
+Prueba de significancia global F
+$H_0 $: El modelo no es funcional para explicar a Y ( x = 0 )
+$H_1 $: el modelo es funcional, al menos un X explica a Y ( al menos un coeficiente es diferente de cero)
+
+F-statistic =  4.883
+p- value = 0.03579
+
+F_calculado >= F
+alfa >= valor p
+0.05 >= 0.03579
+Alfa es mayor al valor p, por lo tanto se rechaza H0 a favor de Ha, el modelo es funcional para explicar Y, al menos uno de los coeficientes es diferente de cero. 
+
+$r^2$ El coeficiente de de correlación esta esta cercano a 10, esto indica que hay una relación debil entre la variable independiente y la dependiente, por lo que no es un buen modelo que explique a ROLL la variable independiente UNEM.
+
+El intercepto no es significativo, y la variable independiente es cercano al máximo nivel de error aceptado del 5% = 0.05, esto quiere decir que este primer modelo no es el optimo para explicar ROLL.
+
+
+
+
+```{r}
+knitr::include_graphics("C:/Users/Oscar/Desktop/Galileo/Trimestre2/Econometria en R/Tareas/laboratorio3/model2.png")
+```
+Prueba de significancia global F
+${H_0} $: El modelo no es funcional para explicar a Y ( x = 0 )
+${H_1} $: el modelo es funcional, al menos un X explica a Y ( al menos un coeficiente es diferente de cero)
+
+F-statistic =  211.5
+p- value = 2.2e-16
+
+F_calculado >= F
+alfa >= valor p
+0.05 >= 2.2e-16
+Alfa es mayor al valor p, por lo tanto se rechaza H0 a favor de Ha, el modelo es funcional para explicar Y, al menos uno de los coeficientes es diferente de cero. 
+
+$r^2$ Siguendo con la misma variable dependiente del modelo #1, pero ahora con más variables independientes, se puede observar que el coeficiente de correlación incrementa arriba del 0.90, esto quiere decir de que la relación de la variable dependiente con las independientes es fuerte y positiva, al agregarle otras tres variables puede ayudar a mejorar a explicar el modelo.
+
+De acuerdo al valor p de cada una de las variables se puede observar que todas aportan al modelo y son significativas que pueden explicar a la variable dependiente.
+
+
+
+
+```{r}
+knitr::include_graphics("C:/Users/Oscar/Desktop/Galileo/Trimestre2/Econometria en R/Tareas/laboratorio3/model3.png")
+```
+Prueba de significancia global F
+$H_0 $: El modelo no es funcional para explicar a Y ( x = 0 )
+$H_1 $: el modelo es funcional, al menos un X explica a Y ( al menos un coeficiente es diferente de cero)
+
+F-statistic =  193.6
+p- value = 7.181e-08
+
+F_calculado >= F
+alfa >= valor p
+0.05 >= 7.181e-08
+Alfa es mayor al valor p, por lo tanto se rechaza H0 a favor de Ha, el modelo es funcional para explicar Y, al menos uno de los coeficientes es diferente de cero. 
+
+$r^2$ el coeficiente de correlacion es de 0.95 de la regresión lineal simple, sin embargo se pude observar que el precio (variable dependiente) es explicada por la variable independiente (MONTH), sin embargo puede haber un sobreajuste del modelo que no es malo descartarlo.
+
+Tanto el intercepto como la variable independiente son significativas para el modelo debio a que son menor al error del 0.05.
+
+
+
